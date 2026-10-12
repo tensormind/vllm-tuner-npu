@@ -1,0 +1,69 @@
+# Ascend NPU + AISBench 验证配置
+# 用 ais_bench (chat/completions + GSM8K 定长 prompt) 取代 HTTP provider，
+# 解决 Qwen3.5 在 /v1/completions 上输出过短被丢弃的问题。
+# 用法: python -m vllm_tuner.cli.main run --config configs/ascend_npu_9b_aisbench.yaml
+model: "/data/qwen3.5/Qwen3.5-9B"
+
+study:
+  name: ascend-9b-aisbench
+
+optimization:
+  preset: high_throughput
+  objectives:
+    - metric: output_tokens_per_sec
+      direction: maximize
+      weight: 1.0
+  sampler: random
+  n_trials: 1
+  n_startup_trials: 1
+
+hardware:
+  accelerator: npu
+  device_ids: [0]
+
+execution:
+  backend: local
+  startup_timeout: 600  # 昇腾启动慢(权重加载+图捕获), 给10分钟
+
+baseline:
+  enabled: false  # 跳过 baseline, 避免二次 vLLM 启动, 仅验证 AISBenchProvider
+
+parameters:
+  - name: gpu_memory_utilization
+    min: 0.85
+    max: 0.90
+    step: 0.05
+
+static_parameters:
+  dtype: auto
+  max_model_len: 32768  # 覆盖 16384 输入 + 1024 输出
+  tensor_parallel_size: 1
+  trust_remote_code: true
+  served_model_name: qwen3.5
+  max_num_seqs: 32
+  enforce_eager: true  # 跳过图捕获, 加速启动
+
+benchmark:
+  provider: aisbench
+  prompt_tokens: 16384       # 匹配预置数据集 input_len
+  output_tokens: 1024        # max_out_len
+  max_seconds: 900           # ais_bench 超时 = max_seconds*3+300
+  concurrent_requests: 32    # batch_size / concurrency
+  data_num: 128              # 数据集条数
+  dataset: "/data/workspaces/qwen/aisbench_auto_tools_prefix/dataset/GSM8K-in16384-num128-Qwen3.5-9B.jsonl"
+  test_type: stream          # stream | text
+  dataset_type: normal       # normal | prefix_cache
+
+aisbench:
+  # work_path: ais_bench 安装根 (含 ais_bench/benchmark/), 用 `pip show ais-bench-benchmark` 的 Location + /ais_bench
+  work_path: "/usr/local/python3.12.13/lib/python3.12/site-packages"
+  tools_path: "/data/workspaces/qwen/aisbench_auto_tools_prefix"
+  model_name: "qwen3.5"
+  dataset_dir: "./dataset"
+  prefix_cache: true
+  npu_num: 1
+  summarizer: "default_perf"
+
+output:
+  directory: "./results_ascend_aisbench"
+  reports: ["json"]

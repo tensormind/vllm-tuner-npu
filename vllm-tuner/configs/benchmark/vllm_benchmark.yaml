@@ -1,0 +1,9 @@
+benchmark:
+  provider: vllm_benchmark
+  prompt_tokens: 1500
+  output_tokens: 200
+  prompt_tokens_stdev: 128
+  dataset: null
+  max_seconds: 300
+  concurrent_requests: 50
+  warmup_requests: 10

@@ -1,0 +1,61 @@
+optimization:
+  preset: low_latency
+  objectives:
+    - metric: p95_latency_ms
+      direction: minimize
+      weight: 1.0
+  sampler: tpe
+  n_trials: 50
+  max_concurrent_trials: 1
+  n_startup_trials: 10
+
+# Recommended parameter search space for low latency
+parameters:
+  - name: gpu_memory_utilization
+    min: 0.80
+    max: 0.95
+    step: 0.05
+  - name: max_num_seqs
+    min: 8
+    max: 128
+    step: 8
+  - name: max_num_batched_tokens
+    min: 512
+    max: 4096
+    step: 512
+  - name: enable_chunked_prefill
+    options: ["true", "false"]
+  - name: enable_prefix_caching
+    options: ["true", "false"]
+  - name: kv_cache_dtype
+    options: ["auto", "fp8"]
+  - name: block_size
+    options: ["16", "32"]
+  - name: swap_space
+    min: 2
+    max: 8
+    step: 2
+# ── vLLM 0.17.1 parameters ──
+# --performance-mode: "interactivity" prioritizes low TTFT and per-request latency
+#  - name: performance_mode
+#    options: ["interactivity", "balanced"]
+
+# --scheduling-policy: request scheduling algorithm
+#  - name: scheduling_policy
+#    options: ["fcfs", "priority"]
+
+# --max-num-partial-prefills: concurrent partial prefills (chunked prefill, Hopper+)
+#  - name: max_num_partial_prefills
+#    min: 1
+#    max: 4
+#    step: 1
+
+# --long-prefill-token-threshold: prompts above this are "long" for scheduling
+#  - name: long_prefill_token_threshold
+#    min: 0
+#    max: 4096
+#    step: 512
+
+# --enforce-eager: disable CUDA graphs
+#  - name: enforce_eager
+#    options: ["true", "false"]

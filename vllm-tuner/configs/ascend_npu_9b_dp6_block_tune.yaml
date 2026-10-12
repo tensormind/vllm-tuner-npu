@@ -1,0 +1,83 @@
+# Qwen3.5-9B DP=6 寻优配置 v2 (NPU 0-5, TP=1 单卡/副本 × 6 副本)
+# 目标: 最大化 output 吞吐, 约束 TTFT avg <= 10s
+# 场景: input 16K, output 1K, 并发 128
+# 新增寻优参数: block_size (vLLM paged-attention 块大小)
+# 用法: ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5 python -m vllm_tuner.cli.main run --config configs/ascend_npu_9b_dp6_block_tune.yaml
+model: "/data/qwen3.5/Qwen3.5-9B"
+
+study:
+  name: ascend-9b-dp6-block-tune    # 新 study, 不带旧死 trial
+
+optimization:
+  preset: high_throughput
+  objectives:
+    - metric: output_tokens_per_sec
+      direction: maximize
+      weight: 1.0
+  sampler: tpe
+  n_trials: 12                      # 4 维空间, 多给些预算
+  n_startup_trials: 4              # 前面 4 个随机采样
+
+# 硬约束: TTFT avg <= 10 秒 (margin>0=满足; 不满足标 infeasible, TPE 避开)
+constraints:
+  - expression: "ttft_ms <= 10000"
+
+hardware:
+  accelerator: npu
+  device_ids: [0, 1, 2, 3, 4, 5]
+
+execution:
+  backend: local
+  startup_timeout: 900             # DP=6 启动慢(6 副本 SFS import+权重), 给15分钟
+
+# ── 寻优参数空间 (4 维) ──
+parameters:
+  - name: max_num_seqs
+    min: 16
+    max: 128
+    step: 16                       # 16/32/48/64/80/96/112/128 — 并发128需≥128才不排队
+  - name: max_model_len
+    options: ["18432", "24576", "32768"]   # 必须 >= 16384+1024=17408
+  - name: block_size
+    options: ["16", "32", "64", "128"]     # vLLM paged-attention 块; 大块吞吐高/内存粗
+  - name: gpu_memory_utilization
+    min: 0.80
+    max: 0.92
+    step: 0.02
+
+# ── 静态参数 (DP=6 单卡/副本 + 利于 TTFT) ──
+static_parameters:
+  dtype: auto
+  tensor_parallel_size: 1          # 单卡/副本
+  data_parallel_size: 6            # 6 副本
+  trust_remote_code: true
+  served_model_name: qwen3.5
+  enforce_eager: true             # 跳过图捕获, 加速 DP=6 启动迭代
+  enable_chunked_prefill: true    # 16K prefill 分块, 降低 TTFT
+  enable_prefix_caching: false
+
+benchmark:
+  provider: aisbench
+  prompt_tokens: 16384            # input_len 16K
+  output_tokens: 1024             # output_len 1K
+  concurrent_requests: 128        # 并发 128 (2× 上一轮)
+  data_num: 512                  # 512 条 (128 并发下 4 轮, 稳态)
+  max_seconds: 600               # ais_bench 子进程超时 = max_seconds*3+300 = 2100s
+  dataset: "/data/workspaces/qwen/aisbench_auto_tools_prefix/dataset/GSM8K-in16384-num512-Qwen3.5-9B.jsonl"
+  test_type: stream
+  dataset_type: normal
+
+aisbench:
+  work_path: "/usr/local/python3.12.13/lib/python3.12/site-packages"
+  tools_path: "/data/workspaces/qwen/aisbench_auto_tools_prefix"
+  model_name: "qwen3.5"
+  prefix_cache: false
+  npu_num: 6
+  summarizer: "default_perf"
+
+baseline:
+  enabled: false
+
+output:
+  directory: "./results_dp6_block_tune"
+  reports: ["json", "html"]

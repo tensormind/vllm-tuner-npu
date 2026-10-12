@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v3 MTP 寻优路径 — Qwen3.5-27B TP=4</title>
+<style>
+  /* ── 调色板 (validated slots 1,2,3 all-pairs; light + dark) ── */
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --axis:           #c3c2b7;
+    --ring:           rgba(11,11,11,0.10);
+    --series-explore: #2a78d6;  /* slot 1 blue  — 探索期 */
+    --series-best:    #eb6834;  /* slot 2 orange — best-so-far 阶梯线 */
+    --series-exploit: #1baf7a;  /* slot 3 aqua  — 利用期 */
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --axis:           #383835;
+      --ring:           rgba(255,255,255,0.10);
+      --series-explore: #3987e5;
+      --series-best:    #d95926;
+      --series-exploit: #199e70;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --axis:           #383835;
+    --ring:           rgba(255,255,255,0.10);
+    --series-explore: #3987e5;
+    --series-best:    #d95926;
+    --series-exploit: #199e70;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 20px 56px;
+    background: var(--page-plane);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--text-primary);
+  }
+  .viz-root { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 650; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .subtitle { font-size: 13.5px; color: var(--text-secondary); margin: 0 0 28px; line-height: 1.5; }
+
+  /* ── 图表区 ── */
+  .chart-wrap {
+    background: var(--surface-1);
+    border-radius: 12px;
+    padding: 24px 20px 16px;
+    border: 1px solid var(--ring);
+  }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis-label { font-size: 11px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .axis-tick   { font-size: 11px; fill: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .axis-title  { font-size: 12px; fill: var(--text-secondary); font-weight: 550; }
+  .grid        { stroke: var(--gridline); stroke-width: 1; }
+  .axis        { stroke: var(--axis); stroke-width: 1; }
+
+  .legend { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 18px; padding-left: 64px; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+  .swatch-line { width: 22px; height: 2.5px; border-radius: 2px; }
+  .swatch-dot  { width: 11px; height: 11px; border-radius: 50%; }
+  .swatch-dot.hollow { background: var(--surface-1); border: 2px solid currentColor; box-sizing: border-box; }
+
+  /* ── 直接标签 (best 里程碑) ── */
+  .dl-label { font-size: 12px; font-weight: 600; fill: var(--series-best); }
+  .dl-sub   { font-size: 10.5px; fill: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+  /* ── 段注释 (探索/利用 分隔) ── */
+  .seg-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.03em; }
+
+  /* ── tooltip ── */
+  .tooltip {
+    position: absolute; pointer-events: none; opacity: 0;
+    transition: opacity 0.12s ease;
+    background: var(--surface-1);
+    border: 1px solid var(--axis);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 12px; line-height: 1.55;
+    color: var(--text-primary);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.14);
+    min-width: 150px;
+  }
+  .tooltip b { color: var(--text-primary); }
+  .tooltip .tk { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .tooltip .cold { color: var(--text-secondary); font-size: 11px; }
+
+  /* ── 数据表 ── */
+  .table-wrap { margin-top: 36px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--gridline); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 11.5px; border-bottom-width: 1.5px; }
+  td { color: var(--text-primary); }
+  tbody tr:hover { background: color-mix(in srgb, var(--series-explore) 6%, transparent); }
+  .pill { display: inline-block; padding: 1.5px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .pill-explore { background: color-mix(in srgb, var(--series-explore) 16%, transparent); color: var(--series-explore); }
+  .pill-exploit { background: color-mix(in srgb, var(--series-exploit) 16%, transparent); color: var(--series-exploit); }
+  .star { color: var(--series-best); font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <h1>v3 MTP 寻优路径</h1>
+  <p class="subtitle">Qwen3.5-27B / TP=4 / NPU 4-7 · input 16K, output 4K, 并发 40, 160 请求 · MTP num_spec=1 · ais_bench <code>output_tokens_per_sec</code>（真实输出吞吐）。12 次 TPE 评估，按时间顺序排列。</p>
+
+  <div class="chart-wrap" style="position:relative">
+    <svg id="chart" viewBox="0 0 980 440" role="img" aria-label="v3 寻优路径折线图">
+      <!-- 由脚本生成 -->
+    </svg>
+    <div id="tooltip" class="tooltip"></div>
+    <div class="legend">
+      <div class="legend-item"><span class="swatch-dot" style="background:var(--series-explore)"></span>探索期 (#1–#5, startup)</div>
+      <div class="legend-item"><span class="swatch-dot" style="background:var(--series-exploit)"></span>利用期 (#6–#12)</div>
+      <div class="legend-item"><span class="swatch-line" style="background:var(--series-best)"></span>历史最优 (best-so-far)</div>
+      <div class="legend-item"><span class="swatch-dot hollow" style="color:var(--text-secondary)"></span>冷启动 (首次编译)</div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="dataTable">
+      <thead>
+        <tr><th>#</th><th>吞吐 (tok/s)</th><th>MNBT</th><th>MNS</th><th>GMU</th><th>阶段</th><th>编译</th><th>说明</th></tr>
+      </thead>
+      <tbody id="dtBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ── 寻优数据 (按评估时间顺序) ──
+const trials = [
+  { n:1,  v:433.2, mnbt:4096,  mns:42, gmu:0.90, phase:'explore', cold:true,  note:'首次 MTP, 冷启动 (误判为负优化)' },
+  { n:2,  v:623.8, mnbt:4096,  mns:42, gmu:0.90, phase:'explore', cold:false, note:'同配置热启动, +44% (冷编译税)' },
+  { n:3,  v:523.9, mnbt:16384, mns:40, gmu:0.88, phase:'explore', cold:true,  note:'MNBT=16384 冷启动' },
+  { n:4,  v:620.9, mnbt:8192,  mns:40, gmu:0.88, phase:'explore', cold:false, note:'MNBT=8192 首试' },
+  { n:5,  v:692.9, mnbt:16384, mns:40, gmu:0.92, phase:'explore', cold:false, note:'探索期最优, 进入利用' },
+  { n:6,  v:694.7, mnbt:16384, mns:44, gmu:0.92, phase:'exploit', cold:false, note:'MNS 40→44, 小涨' },
+  { n:7,  v:694.7, mnbt:16384, mns:44, gmu:0.88, phase:'exploit', cold:false, note:'GMU=0.88, 持平 (陷入局部)' },
+  { n:8,  v:694.7, mnbt:16384, mns:44, gmu:0.88, phase:'exploit', cold:false, note:'三连平, MNBT=16384 区饱和' },
+  { n:9,  v:751.0, mnbt:8192,  mns:44, gmu:0.88, phase:'exploit', cold:false, note:'★ 回探 MNBT=8192, 跳出局部, 全局最优' },
+  { n:10, v:747.9, mnbt:8192,  mns:44, gmu:0.90, phase:'exploit', cold:false, note:'确认 #9 邻域' },
+  { n:11, v:660.7, mnbt:8192,  mns:42, gmu:0.88, phase:'exploit', cold:false, note:'回探 MNS=42 (验证 MNS=44 更优)' },
+  { n:12, v:662.2, mnbt:8192,  mns:44, gmu:0.90, phase:'exploit', cold:false, note:'收官' },
+];
+
+// best-so-far 阶梯
+let best = 0;
+trials.forEach(t => { best = Math.max(best, t.v); t.best = best; });
+
+// ── 画布几何 ──
+const W = 980, H = 440;
+const M = { l: 64, r: 30, t: 36, b: 56 };
+const PW = W - M.l - M.r, PH = H - M.t - M.b;
+
+// y 轴: 0 → 800 (留头部空间放标签)
+const yMax = 800, yMin = 0;
+const xMin = 0.5, xMax = 12.5;
+const sx = n => M.l + ((n - xMin) / (xMax - xMin)) * PW;
+const sy = v => M.t + PH - ((v - yMin) / (yMax - yMin)) * PH;
+
+const svg = document.getElementById('chart');
+const ns = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs={}) => {
+  const e = document.createElementNS(ns, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+};
+
+// ── y 网格 + 刻度 ──
+[0, 200, 400, 600, 800].forEach(v => {
+  const y = sy(v);
+  svg.appendChild(el('line', { x1: M.l, y1: y, x2: W - M.r, y2: y, class: 'grid' }));
+  const t = el('text', { x: M.l - 10, y: y + 4, 'text-anchor': 'end', class: 'axis-tick' });
+  t.textContent = v; svg.appendChild(t);
+});
+// y 轴标题
+const yT = el('text', { x: 18, y: M.t + PH/2, 'text-anchor':'middle', class:'axis-title', transform:`rotate(-90,18,${M.t+PH/2})` });
+yT.textContent = '吞吐 (tok/s)'; svg.appendChild(yT);
+
+// ── x 轴 + 刻度 ──
+svg.appendChild(el('line', { x1: M.l, y1: M.t + PH, x2: W - M.r, y2: M.t + PH, class: 'axis' }));
+trials.forEach(t => {
+  const x = sx(t.n);
+  const tk = el('text', { x, y: M.t + PH + 20, 'text-anchor':'middle', class:'axis-tick' });
+  tk.textContent = '#' + t.n; svg.appendChild(tk);
+});
+const xT = el('text', { x: M.l + PW/2, y: H - 8, 'text-anchor':'middle', class:'axis-title' });
+xT.textContent = '评估序号 (trial #)'; svg.appendChild(xT);
+
+// ── 阶段背景区 + 标签 ──
+// 探索区: x ∈ [#0.5, #5.5]; 利用区: [#5.5, #12.5]
+const xExpEnd = sx(5.5);
+svg.appendChild(el('rect', { x: M.l, y: M.t, width: xExpEnd - M.l, height: PH, fill: 'var(--series-explore)', 'fill-opacity': 0.035 }));
+svg.appendChild(el('rect', { x: xExpEnd, y: M.t, width: W - M.r - xExpEnd, height: PH, fill: 'var(--series-exploit)', 'fill-opacity': 0.035 }));
+// 分隔虚线
+svg.appendChild(el('line', { x1: xExpEnd, y1: M.t, x2: xExpEnd, y2: M.t+PH, stroke: 'var(--axis)', 'stroke-width':1, 'stroke-dasharray':'3 3' }));
+
+const tag1 = el('text', { x: M.l + (xExpEnd-M.l)/2, y: M.t - 12, 'text-anchor':'middle', class:'seg-tag', fill:'var(--series-explore)' });
+tag1.textContent = '探索期'; svg.appendChild(tag1);
+const tag2 = el('text', { x: xExpEnd + (W-M.r-xExpEnd)/2, y: M.t - 12, 'text-anchor':'middle', class:'seg-tag', fill:'var(--series-exploit)' });
+tag2.textContent = '利用期'; svg.appendChild(tag2);
+
+// ── best-so-far 阶梯线 (orange, 先画在底层) ──
+let bestPath = `M ${sx(1)} ${sy(trials[0].best)}`;
+for (let i = 1; i < trials.length; i++) {
+  const t = trials[i];
+  bestPath += ` L ${sx(t.n)} ${sy(trials[i-1].best)} L ${sx(t.n)} ${sy(t.best)}`;
+}
+bestPath += ` L ${sx(12)} ${sy(trials[11].best)}`;
+svg.appendChild(el('path', { d: bestPath, fill:'none', stroke:'var(--series-best)', 'stroke-width':2, 'stroke-dasharray':'5 4', opacity:0.85 }));
+
+// ── 主折线 (按阶段分段着色) ──
+function drawLineSeg(from, to, color) {
+  svg.appendChild(el('line', {
+    x1: sx(from.n), y1: sy(from.v), x2: sx(to.n), y2: sy(to.v),
+    stroke: color, 'stroke-width': 2, 'stroke-linecap':'round'
+  }));
+}
+// 探索期内 (#1→#5) 蓝色
+for (let i = 0; i < 4; i++) drawLineSeg(trials[i], trials[i+1], 'var(--series-explore)');
+// #5→#6 跨界用蓝 (过渡)
+drawLineSeg(trials[4], trials[5], 'var(--series-explore)');
+// 利用期内 (#6→#12) 青色
+for (let i = 5; i < 11; i++) drawLineSeg(trials[i], trials[i+1], 'var(--series-exploit)');
+
+// ── 数据点 + 冷启动空心环 ──
+const phaseColor = p => p === 'explore' ? 'var(--series-explore)' : 'var(--series-exploit)';
+trials.forEach(t => {
+  const cx = sx(t.n), cy = sy(t.v);
+  const c = phaseColor(t.phase);
+  // surface ring (2px)
+  svg.appendChild(el('circle', { cx, cy, r: 7, fill: 'var(--surface-1)', stroke: 'var(--ring)', 'stroke-width': 2 }));
+  // 实心点
+  const dot = el('circle', { cx, cy, r: 5, fill: c, stroke: 'var(--surface-1)', 'stroke-width': 1.5, class:'hit', 'data-n': t.n });
+  svg.appendChild(dot);
+  if (t.cold) {
+    // 冷启动: 外加空心环 (二级编码)
+    svg.appendChild(el('circle', { cx, cy, r: 9.5, fill:'none', stroke: c, 'stroke-width': 1.5, 'stroke-dasharray':'2 2', opacity:0.7 }));
+  }
+});
+
+// ── 直接标签: best 里程碑 (#2, #5, #6, #9) ──
+const milestones = [
+  { n:2,  v:623.8, label:'624', sub:'同配置热启动' },
+  { n:5,  v:692.9, label:'693', sub:'探索期最优' },
+  { n:6,  v:694.7, label:'695', sub:'MNS→44' },
+  { n:9,  v:751.0, label:'751', sub:'★ 全局最优' },
+];
+milestones.forEach(m => {
+  const x = sx(m.n), y = sy(m.v);
+  const lab = el('text', { x: x + 12, y: y - 8, class:'dl-label' });
+  lab.textContent = m.label; svg.appendChild(lab);
+  const sub = el('text', { x: x + 12, y: y + 7, class:'dl-sub' });
+  sub.textContent = m.sub; svg.appendChild(sub);
+  // 引导小线
+  svg.appendChild(el('line', { x1: x+6, y1: y-2, x2: x+11, y2: y-6, stroke:'var(--series-best)', 'stroke-width':1, opacity:0.5 }));
+});
+
+// ── v2 基线参考线 (611) ──
+const yBase = sy(611.1);
+svg.appendChild(el('line', { x1: M.l, y1: yBase, x2: W - M.r, y2: yBase, stroke:'var(--text-muted)', 'stroke-width':1.2, 'stroke-dasharray':'6 4', opacity:0.7 }));
+const baseLab = el('text', { x: W - M.r - 4, y: yBase - 6, 'text-anchor':'end', class:'dl-sub', fill:'var(--text-muted)' });
+baseLab.textContent = 'v2 基线 611 tok/s (无 MTP)'; svg.appendChild(baseLab);
+
+// ── hover tooltip ──
+const tooltip = document.getElementById('tooltip');
+const wrap = document.querySelector('.chart-wrap');
+document.querySelectorAll('.hit').forEach(dot => {
+  dot.addEventListener('mouseenter', e => {
+    const n = +dot.getAttribute('data-n');
+    const t = trials.find(t => t.n === n);
+    const c = phaseColor(t.phase);
+    tooltip.innerHTML =
+      `<b style="color:${c}">#${t.n} · ${t.phase==='explore'?'探索期':'利用期'}</b>` +
+      (t.cold ? ` <span class="cold">· 冷启动</span>` : '') +
+      `<br><span class="tk">吞吐</span> <b>${t.v.toFixed(1)} tok/s</b>` +
+      (t.best > t.v - 0.05 && t.best >= t.v ? '' : '') +
+      ` <span class="tk">(best ${t.best.toFixed(1)})</span>` +
+      `<br><span class="tk">MNBT</span> ${t.mnbt}  <span class="tk">MNS</span> ${t.mns}  <span class="tk">GMU</span> ${t.gmu}` +
+      `<br><span class="cold">${t.note}</span>`;
+    tooltip.style.opacity = 1;
+  });
+  dot.addEventListener('mousemove', e => {
+    const r = wrap.getBoundingClientRect();
+    let x = e.clientX - r.left + 14, y = e.clientY - r.top + 14;
+    if (x > r.width - 175) x = e.clientX - r.left - 165;
+    tooltip.style.left = x + 'px'; tooltip.style.top = y + 'px';
+  });
+  dot.addEventListener('mouseleave', () => { tooltip.style.opacity = 0; });
+});
+// hover 放大点
+document.querySelectorAll('.hit').forEach(dot => {
+  dot.style.cursor = 'pointer';
+  dot.style.transition = 'r 0.1s';
+  dot.addEventListener('mouseenter', () => dot.setAttribute('r', 7));
+  dot.addEventListener('mouseleave', () => dot.setAttribute('r', 5));
+});
+
+// ── 数据表 ──
+const tbody = document.getElementById('dtBody');
+trials.forEach(t => {
+  const tr = document.createElement('tr');
+  const isBest = t.v === 751.0;
+  tr.innerHTML =
+    `<td>${isBest ? '<span class="star">★ #'+t.n+'</span>' : '#'+t.n}</td>` +
+    `<td><b>${t.v.toFixed(1)}</b></td>` +
+    `<td>${t.mnbt}</td><td>${t.mns}</td><td>${t.gmu.toFixed(2)}</td>` +
+    `<td><span class="pill ${t.phase==='explore'?'pill-explore':'pill-exploit'}">${t.phase==='explore'?'探索':'利用'}</span></td>` +
+    `<td>${t.cold ? '冷' : '热'}</td>` +
+    `<td style="color:var(--text-secondary)">${t.note}</td>`;
+  tbody.appendChild(tr);
+});
+</script>
+</body>
+</html>

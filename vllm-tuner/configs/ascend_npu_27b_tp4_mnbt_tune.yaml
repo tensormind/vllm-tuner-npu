@@ -1,0 +1,98 @@
+# Qwen3.5-27B TP=4 寻优 (NPU 0-3, DP=1, block_size=128 固定)
+# 目标: 最大化 output 吞吐 (无 TTFT 约束)
+# 场景: input 16K, output 4K, 并发 40, 请求数 160
+# 寻优维度 4 个: max_num_batched_tokens(新增) / max_num_seqs / max_model_len / gpu_memory_utilization
+# env vars (shell export, 见用法行): HCCL_BUFFSIZE=512 PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+#   TASK_QUEUE_ENABLE=1 OMP_PROC_BIND=false OMP_NUM_THREADS=1
+# 用法:
+#   head -160 /data/workspaces/qwen/aisbench_auto_tools_prefix/dataset/GSM8K-in16384-num512-Qwen3.5-9B.jsonl \
+#     > /data/workspaces/qwen/aisbench_auto_tools_prefix/dataset/GSM8K-in16384-num160-Qwen3.5-27B.jsonl
+#   ASCEND_RT_VISIBLE_DEVICES=4,5,6,7 \
+#     HCCL_BUFFSIZE=512 PYTORCH_NPU_ALLOC_CONF=expandable_segments:True \
+#     TASK_QUEUE_ENABLE=1 OMP_PROC_BIND=false OMP_NUM_THREADS=1 \
+#     python -m vllm_tuner.cli.main run --config configs/ascend_npu_27b_tp4_mnbt_tune.yaml
+# (NPU 0-3 被宿主机占用, 用空闲的 4-7 跑 TP=4)
+model: "/data/qwen3.5/Qwen3.5-27B"
+
+study:
+  name: ascend-27b-tp4-mnbt-tune-v2   # 新 study, 避开 v1 旧失败 trial (max_model_len=20480 顶满致全失败)
+
+optimization:
+  preset: high_throughput
+  objectives:
+    - metric: output_tokens_per_sec
+      direction: maximize
+      weight: 1.0
+  sampler: tpe
+  n_trials: 12
+  n_startup_trials: 5
+
+# 本次无约束 (纯吞吐最大化)
+constraints: []
+
+hardware:
+  accelerator: npu
+  device_ids: [4, 5, 6, 7]         # NPU 0-3 被宿主机占用, 用空闲的 4-7 跑 TP=4
+
+execution:
+  backend: local
+  startup_timeout: 1200          # 27B 权重大 + cudagraph FULL_DECODE_ONLY 捕获, 给 20 分钟
+
+# ── 寻优参数空间 (4 维) ──
+parameters:
+  - name: max_num_batched_tokens
+    options: ["4096", "8192", "16384"]      # 用户新增维度; chunked prefill 分块大小
+  - name: max_num_seqs
+    min: 40
+    max: 44
+    step: 2                                # 40/42/44 — 并发 40 需 ≥40 才不排队
+  - name: max_model_len
+    options: ["24576", "28672", "32768"]   # 去掉 20480: chat template +5 token, 16389+4096=20485>20480 致全请求 400
+  - name: gpu_memory_utilization
+    min: 0.88
+    max: 0.94
+    step: 0.02                             # 0.88/0.90/0.92/0.94
+
+# ── 静态参数 (TP=4 + block 128 + cudagraph) ──
+static_parameters:
+  dtype: auto
+  tensor_parallel_size: 4
+  data_parallel_size: 1
+  trust_remote_code: true
+  served_model_name: qwen3.5-27b
+  block_size: 128                          # 用户指定固定
+  max_num_seqs: 44                         # 兜底初值, 会被寻优参数覆盖
+  max_num_batched_tokens: 16384            # 兜底初值, 会被寻优参数覆盖
+  max_model_len: 32768                     # 兜底初值, 会被寻优参数覆盖
+  gpu_memory_utilization: 0.92            # 兜底初值, 会被寻优参数覆盖
+  enforce_eager: false                     # 走 cudagraph FULL_DECODE_ONLY (非 eager)
+  enable_chunked_prefill: true            # 16K prefill 分块
+  enable_prefix_caching: false
+  compilation_config: '{"cudagraph_mode":"FULL_DECODE_ONLY"}'   # JSON 字符串, Popen list 形原样传递
+  additional_config: '{"enable_cpu_binding":true}'
+
+benchmark:
+  provider: aisbench
+  prompt_tokens: 16384
+  output_tokens: 4096                      # output 4K (本轮关键变化)
+  concurrent_requests: 40                  # 并发 40
+  data_num: 160                            # 请求数 160 (= 数据集行数)
+  max_seconds: 1200                        # 4K output decode 耗时长; ais_bench 超时 = 1200*3+300 = 3900s
+  dataset: "/data/workspaces/qwen/aisbench_auto_tools_prefix/dataset/GSM8K-in16384-num160-Qwen3.5-27B.jsonl"
+  test_type: stream
+  dataset_type: normal
+
+aisbench:
+  work_path: "/usr/local/python3.12.13/lib/python3.12/site-packages"
+  tools_path: "/data/workspaces/qwen/aisbench_auto_tools_prefix"
+  model_name: "qwen3.5-27b"                # 须与 served_model_name 一致
+  prefix_cache: false
+  npu_num: 4
+  summarizer: "default_perf"
+
+baseline:
+  enabled: false                           # 不跑 baseline (上一轮已修复的早返回生效)
+
+output:
+  directory: "./results_27b_tp4_mnbt_tune"
+  reports: ["json", "html"]

@@ -1,0 +1,67 @@
+# Test config for CPU-only environments
+# Usage: python -m vllm_tuner.cli.main run --config configs/test_cpu.yaml
+model: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+
+study:
+  name: test-cpu-study
+
+optimization:
+  preset: balanced
+  objectives:
+    - metric: output_tokens_per_sec
+      direction: maximize
+      weight: 0.6
+    - metric: p95_latency_ms
+      direction: minimize
+      weight: 0.4
+  sampler: tpe
+  n_trials: 5
+  n_startup_trials: 3
+
+hardware:
+  accelerator: cpu
+
+parameters:
+  - name: max_num_seqs
+    min: 4
+    max: 32
+    step: 4
+  - name: max_num_batched_tokens
+    min: 256
+    max: 2048
+    step: 256
+  - name: enable_chunked_prefill
+    options: ["true", "false"]
+  - name: enable_prefix_caching
+    options: ["true", "false"]
+  # NOTE: block_size tuning disabled on CPU — values >16 require Intel IPEX
+  # - name: block_size
+  #   options: ["16", "32"]
+  - name: swap_space
+    min: 1
+    max: 4
+    step: 1
+  # NOTE: gpu_memory_utilization is not applicable for CPU
+
+static_parameters:
+  dtype: float32
+  max_model_len: 512
+  tensor_parallel_size: 1
+  enforce_eager: true
+
+benchmark:
+  provider: http
+  # provider: guidellm
+  prompt_tokens: 32
+  output_tokens: 16
+  max_seconds: 180
+  concurrent_requests: 2
+  warmup_requests: 0
+
+baseline:
+  enabled: true
+  num_requests: 10
+
+output:
+  directory: "./results/test_cpu"
+  reports: ["json", "yaml"]

@@ -1,0 +1,102 @@
+# Qwen3.5-27B TP=4 寻优 v3 —— 新增 MTP (speculative decoding) 维度
+# 目标: 最大化 output 吞吐 (无 TTFT 约束)
+# 场景: input 16K, output 4K, 并发 40, 请求数 160 (与 v2 同 workload, 隔离 MTP 增益)
+#
+# v3 关键变化 (相对 v2 best=611):
+#   - 新增 speculative_config (qwen3_5_mtp, num_speculative_tokens=1) —— MTP 投机解码
+#     依据: OPTIMIZATION_PATHS 数据显示 PC-only ≈ 601-605 (≈ v2 的 611), MTP1+PC=655 (+8%).
+#     MTP 是真正能超越 611 的杠杆 (model config mtp_num_hidden_layers=1 原生支持).
+#   - max_model_len 固定 24576 (v2 最优值), 不再搜索 —— 缩维度提效, 释放 KV cache
+#   - enable_prefix_caching 保持 false —— prefill 非瓶颈, PC 无净增益 (PC-only≈611)
+#   - 搜索维度 3 个: max_num_batched_tokens / max_num_seqs / gpu_memory_utilization
+#
+# env vars (shell export, 见用法行): HCCL_BUFFSIZE=512 PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+#   TASK_QUEUE_ENABLE=1 OMP_PROC_BIND=false OMP_NUM_THREADS=1
+# 用法:
+#   ASCEND_RT_VISIBLE_DEVICES=4,5,6,7 \
+#     HCCL_BUFFSIZE=512 PYTORCH_NPU_ALLOC_CONF=expandable_segments:True \
+#     TASK_QUEUE_ENABLE=1 OMP_PROC_BIND=false OMP_NUM_THREADS=1 \
+#     python -m vllm_tuner.cli.main run --config configs/ascend_npu_27b_tp4_mtp_tune.yaml
+model: "/data/qwen3.5/Qwen3.5-27B"
+
+study:
+  name: ascend-27b-tp4-mtp-tune-v3   # 新 study (MTP 维度)
+
+optimization:
+  preset: high_throughput
+  objectives:
+    - metric: output_tokens_per_sec
+      direction: maximize
+      weight: 1.0
+  sampler: tpe
+  n_trials: 12
+  n_startup_trials: 5
+
+# 本次无约束 (纯吞吐最大化)
+constraints: []
+
+hardware:
+  accelerator: npu
+  device_ids: [4, 5, 6, 7]         # NPU 0/3 也空闲; 用 4-7 跑 TP=4 (与 v2 一致)
+
+execution:
+  backend: local
+  startup_timeout: 1500          # MTP 投机解码 + cudagraph 捕获, 给 25 分钟
+
+# ── 寻优参数空间 (3 维; MML 固定) ──
+parameters:
+  - name: max_num_batched_tokens
+    options: ["4096", "8192", "16384"]      # chunked prefill 分块大小
+  - name: max_num_seqs
+    min: 40
+    max: 44
+    step: 2                                # 40/42/44 — 并发 40 需 ≥40
+  - name: gpu_memory_utilization
+    min: 0.88
+    max: 0.92
+    step: 0.02                             # 0.88/0.90/0.92 — 排除 0.94 (MTP draft+cudagraph 在 0.94 内存吃紧致启动 hang)
+
+# ── 静态参数 (TP=4 + block 128 + cudagraph + MTP) ──
+static_parameters:
+  dtype: auto
+  tensor_parallel_size: 4
+  data_parallel_size: 1
+  trust_remote_code: true
+  served_model_name: qwen3.5-27b
+  block_size: 128                          # 用户指定固定
+  max_model_len: 24576                     # v2 最优值, 固定不搜索 (16384+4096+chat_template≈20485, 余量足)
+  max_num_seqs: 42                         # 兜底初值, 会被寻优参数覆盖
+  max_num_batched_tokens: 8192             # 兜底初值, 会被寻优参数覆盖
+  gpu_memory_utilization: 0.90            # 兜底初值, 会被寻优参数覆盖
+  enforce_eager: false                     # 走 cudagraph FULL_DECODE_ONLY (非 eager)
+  enable_chunked_prefill: true            # 16K prefill 分块
+  enable_prefix_caching: false            # prefill 非瓶颈, PC 无净增益 (保持 false 隔离 MTP)
+  compilation_config: '{"cudagraph_mode":"FULL_DECODE_ONLY"}'   # JSON 字符串, Popen list 形原样传递
+  additional_config: '{"enable_cpu_binding":true}'
+  speculative_config: '{"method":"qwen3_5_mtp","num_speculative_tokens":1}'   # ★ v3 核心: MTP 投机解码
+
+benchmark:
+  provider: aisbench
+  prompt_tokens: 16384
+  output_tokens: 4096                      # output 4K
+  concurrent_requests: 40                  # 并发 40
+  data_num: 160                            # 请求数 160 (= 数据集行数)
+  max_seconds: 1200                        # 4K output decode 耗时长; ais_bench 超时 = 1200*3+300 = 3900s
+  dataset: "/data/workspaces/qwen/aisbench_auto_tools_prefix/dataset/GSM8K-in16384-num160-Qwen3.5-27B.jsonl"
+  test_type: stream
+  dataset_type: normal                     # 普通数据集 (无共享前缀, 与 v2 同 workload)
+
+aisbench:
+  work_path: "/usr/local/python3.12.13/lib/python3.12/site-packages"
+  tools_path: "/data/workspaces/qwen/aisbench_auto_tools_prefix"
+  model_name: "qwen3.5-27b"                # 须与 served_model_name 一致
+  prefix_cache: false
+  npu_num: 4
+  summarizer: "default_perf"
+
+baseline:
+  enabled: false                           # 不跑 baseline
+
+output:
+  directory: "./results_27b_tp4_mtp_tune"
+  reports: ["json", "html"]

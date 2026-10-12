@@ -1,0 +1,126 @@
+[build-system]
+requires = ["hatchling", "tomli"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vllm-tuner"
+version = "0.1.6"
+description = "A Python package for tuning vLLM hyperparameters."
+readme = "README.md"
+authors = [
+    { name = "Roman Kryvokhyzha", email = "kriwohizha@gmail.com" }
+]
+keywords = ["vllm", "tunner", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    # "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+requires-python = ">=3.11,<3.14"
+
+dependencies = [
+    # Core dependencies
+    "rich ~= 14.3.0",
+    "setuptools >= 75.6.0",
+    "loguru ~= 0.7.3",
+    "fire ~= 0.7.1",
+    "joblib ~= 1.5.2",
+    "pydantic >= 2.11.1, < 2.13.0",
+    "pydantic-settings >= 2.13.0",
+    "optuna ~= 4.7.0",
+
+    # Other dependencies
+    "pandas ~= 3.0.0",
+    "pyyaml >= 6.0",
+    "huggingface_hub[hf_xet]",
+]
+
+[project.optional-dependencies]
+gpu = ["nvidia-ml-py >= 12.560.30"]
+guidellm = ["guidellm"]
+http = ["httpx >= 0.27"]
+aisbench = ["ais-bench-benchmark", "requests"]
+ray = ["ray[default] >= 2.40"]
+report = ["scikit-learn ~= 1.8.0"]
+all = [
+    "vllm-tuner[gpu]",
+    "vllm-tuner[guidellm]",
+    "vllm-tuner[http]",
+    "vllm-tuner[aisbench]",
+    "vllm-tuner[ray]",
+    "vllm-tuner[report]",
+]
+
+[dependency-groups]
+dev = [
+    {include-group = "lint"},
+    {include-group = "test"},
+]
+lint = [
+    "pre-commit",
+    "ruff",
+]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-env",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vllm_tuner"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+exclude = [
+    ".git",
+    "__pycache__",
+    ".ruff_cache",
+    ".github",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "D"]  # all rules can be found here: https://beta.ruff.rs/docs/rules/
+ignore=[
+    "E203",         # space before : (needed for how black formats slicing)
+    "E731",         # do not assign a lambda expression, use a def
+    "E741",         # do not use variables named 'l', 'O', or 'I'
+    "F403",         # unable to detect undefined names
+    "D100",         # missing docstring in public module
+    "D101",         # missing docstring in public class
+    "D102",         # missing docstring in public method
+    "D103",         # missing docstring in public function
+    "D104",         # missing docstring in public package
+    "D105",         # missing docstring in magic method
+    "D107",         # missing docstring in `__init__`
+    "D203",         # incorrect-blank-line-before-class
+    "D213",         # multi-line-summary-second-line
+]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/python/*"=["E402"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+
+[tool.nbqa.config]
+ruff = "pyproject.toml"
+
+[tool.nbqa.addopts]
+ruff = ["--extend-ignore=E402"]
+
+[tool.nbqa.mutate]
+ruff = 1
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]

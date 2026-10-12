@@ -1,0 +1,71 @@
+# Low-latency tuning — single GPU
+# Usage: python -m vllm_tuner.cli.main run --config configs/low_latency_gpu.yaml
+model: "meta-llama/Llama-3.1-8B-Instruct"
+
+study:
+  name: low-latency-study
+
+optimization:
+  preset: low_latency
+  objectives:
+    - metric: p95_latency_ms
+      direction: minimize
+      weight: 1.0
+  sampler: tpe
+  n_trials: 50
+  n_startup_trials: 10
+
+hardware:
+  accelerator: gpu
+  device_ids: [0]
+
+parameters:
+  - name: gpu_memory_utilization
+    min: 0.5
+    max: 0.95
+    step: 0.05
+  - name: max_num_seqs
+    min: 16
+    max: 256
+    step: 16
+  - name: max_num_batched_tokens
+    min: 4096
+    max: 8192
+    step: 1024
+  - name: enable_chunked_prefill
+    options: ["true", "false"]
+  - name: enable_prefix_caching
+    options: ["true", "false"]
+  - name: block_size
+    options: ["16", "32"]
+  - name: swap_space
+    min: 0
+    max: 8
+    step: 2
+
+static_parameters:
+  dtype: auto
+  max_model_len: 4096
+  kv_cache_dtype: auto
+  tensor_parallel_size: 1
+
+benchmark:
+  provider: guidellm
+  prompt_tokens: 512
+  output_tokens: 128
+  max_seconds: 300
+  concurrent_requests: 20
+  warmup_requests: 10
+
+baseline:
+  enabled: true
+  num_requests: 50
+
+# cost:
+#   target_throughput: 100
+#   instance_type: "a2-highgpu-1g"
+#   price_per_hour: 3.67
+
+output:
+  directory: "./results"
+  reports: ["html", "json"]

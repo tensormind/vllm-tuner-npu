@@ -1,0 +1,68 @@
+[2026-08-27 04:13:20,849] [ais_bench] [[32mINFO[0m] Current exp folder: outputs/perf_32k/20260827_041303
+[2026-08-27 04:13:20,888] [ais_bench] [[32mINFO[0m] Starting inference tasks...
+[2026-08-27 04:13:20,891] [ais_bench] [[32mINFO[0m] Partitioned into 1 tasks.
+[2026-08-27 04:13:20,891] [ais_bench] [[32mINFO[0m] Merging datasets with the same model and inferencer...
+[2026-08-27 04:13:20,917] [ais_bench] [[33mWARNING[0m] Can't set cursor because of setupterm: could not find terminal, running in background mode
+[2026-08-27 04:13:20,917] [ais_bench] [[32mINFO[0m] Launch TasksMonitor, PID: 97625, Refresh interval: 0.5, Run in background: True
+Monitoring tasks progress:   0%|          | 0/1 [00:00<?, ?it/s][2026-08-27 04:13:20,919] [ais_bench] [[33mWARNING[0m] Failed to read status file 'outputs/perf_32k/20260827_041303/status_tmp/tmp_qwen35-9b-32k-bs32_synthetic-32k.json': [Errno 2] No such file or directory: 'outputs/perf_32k/20260827_041303/status_tmp/tmp_qwen35-9b-32k-bs32_synthetic-32k.json'. Attempting to clear and continuing.
+[2026-08-27 04:16:56,291] [ais_bench] [[33mWARNING[0m] Failed to parse JSON from 'outputs/perf_32k/20260827_041303/status_tmp/tmp_qwen35-9b-32k-bs32_synthetic-32k.json': Expecting value: line 1 column 1 (char 0). Clearing corrupted file and continuing.
+Monitoring tasks progress: 100%|██████████| 1/1 [07:47<00:00, 467.31s/it]Monitoring tasks progress: 100%|██████████| 1/1 [07:47<00:00, 467.32s/it]
+[2026-08-27 04:21:10,424] [ais_bench] [[32mINFO[0m] Inference tasks completed.
+[2026-08-27 04:21:10,428] [ais_bench] [[32mINFO[0m] Summarizing performance results...
+Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:00<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:01<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details:   0%|          | 0/100 [00:02<?, ?it/s]Calculating performance details: 100%|██████████| 100/100 [00:02<00:00, 34.30it/s]Calculating performance details: 100%|██████████| 100/100 [00:03<00:00, 33.16it/s]Calculating performance details: 100%|██████████| 100/100 [00:03<00:00, 32.09it/s]Calculating performance details: 100%|██████████| 100/100 [00:03<00:00, 32.09it/s]
+[2026-08-27 04:21:16,812] [ais_bench] [[32mINFO[0m] Request timeline and concurrency chart saved to outputs/perf_32k/20260827_041303/performances/qwen35-9b-32k-bs32/synthetic-32k_plot.html
+[2026-08-27 04:21:16,812] [ais_bench] [[32mINFO[0m] The synthetic-32k_plot has been saved in outputs/perf_32k/20260827_041303/performances/qwen35-9b-32k-bs32/synthetic-32k_plot.html
+[2026-08-27 04:21:16,815] [ais_bench] [[32mINFO[0m] Converting performance results for stage...
+[2026-08-27 04:21:16,815] [ais_bench] [[32mINFO[0m] Performance results conversion completed!
+[2026-08-27 04:21:16,816] [ais_bench] [[32mINFO[0m] Starting metrics calculation...
+[2026-08-27 04:21:16,825] [ais_bench] [[32mINFO[0m] Starting common metrics calculation...
+[2026-08-27 04:21:16,826] [ais_bench] [[32mINFO[0m] Adding units to metrics...
+[2026-08-27 04:21:16,826] [ais_bench] [[32mINFO[0m] Performance data calculation completed!
+[2026-08-27 04:21:16,827] [ais_bench] [[32mINFO[0m] Performance Results of task [qwen35-9b-32k-bs32/synthetic-32k]: 
+╒══════════════════════════╤═════════╤══════════════════╤══════════════════╤══════════════════╤══════════════════╤══════════════════╤═════════════════╤═══════════════════╤═════╕
+│ Performance Parameters   │ Stage   │ Average          │ Min              │ Max              │ Median           │ P75              │ P90             │ P99               │  N  │
+╞══════════════════════════╪═════════╪══════════════════╪══════════════════╪══════════════════╪══════════════════╪══════════════════╪═════════════════╪═══════════════════╪═════╡
+│ E2EL                     │ total   │ 126563.6 ms      │ 40564.1 ms       │ 173377.1 ms      │ 137131.8 ms      │ 137561.8 ms      │ 138560.6 ms     │ 169454.1 ms       │ 100 │
+├──────────────────────────┼─────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────────┼───────────────────┼─────┤
+│ TTFT                     │ total   │ 90439.6 ms       │ 4434.4 ms        │ 136064.9 ms      │ 99972.4 ms       │ 100206.6 ms      │ 100826.8 ms     │ 131852.6 ms       │ 100 │
+├──────────────────────────┼─────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────────┼───────────────────┼─────┤
+│ TPOT                     │ total   │ 141.7 ms         │ 23.2 ms          │ 157.3 ms         │ 146.2 ms         │ 146.8 ms         │ 147.9 ms        │ 150.1 ms          │ 100 │
+├──────────────────────────┼─────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────────┼───────────────────┼─────┤
+│ ITL                      │ total   │ 253.2 ms         │ 0.0 ms           │ 4485.3 ms        │ 264.9 ms         │ 278.3 ms         │ 286.9 ms        │ 311.1 ms          │ 100 │
+├──────────────────────────┼─────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────────┼───────────────────┼─────┤
+│ InputTokens              │ total   │ 32778.0          │ 32778.0          │ 32778.0          │ 32778.0          │ 32778.0          │ 32778.0         │ 32778.0           │ 100 │
+├──────────────────────────┼─────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────────┼───────────────────┼─────┤
+│ OutputTokens             │ total   │ 256.0            │ 256.0            │ 256.0            │ 256.0            │ 256.0            │ 256.0           │ 256.0             │ 100 │
+├──────────────────────────┼─────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────────┼───────────────────┼─────┤
+│ OutputTokenThroughput    │ total   │ 2.191 token/s    │ 1.4766 token/s   │ 6.311 token/s    │ 1.8668 token/s   │ 2.028 token/s    │ 3.1022 token/s  │ 5.7198 token/s    │ 100 │
+├──────────────────────────┼─────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼──────────────────┼─────────────────┼───────────────────┼─────┤
+│ PrefillTokenThroughput   │ total   │ 534.4313 token/s │ 240.8997 token/s │ 7391.688 token/s │ 327.8706 token/s │ 329.9636 token/s │ 716.696 token/s │ 3891.3262 token/s │ 100 │
+╘══════════════════════════╧═════════╧══════════════════╧══════════════════╧══════════════════╧══════════════════╧══════════════════╧═════════════════╧═══════════════════╧═════╛
+╒═════════════════════════╤═════════╤═══════════════════╕
+│ Common Metric           │ Stage   │ Value             │
+╞═════════════════════════╪═════════╪═══════════════════╡
+│ Benchmark Duration      │ total   │ 438216.8253 ms    │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Total Requests          │ total   │ 100               │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Failed Requests         │ total   │ 0                 │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Success Requests        │ total   │ 100               │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Concurrency             │ total   │ 28.8815           │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Max Concurrency         │ total   │ 32                │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Request Throughput      │ total   │ 0.2282 req/s      │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Total Input Tokens      │ total   │ 3277800           │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Total Generated Tokens  │ total   │ 25600             │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Input Token Throughput  │ total   │ 7479.8589 token/s │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Output Token Throughput │ total   │ 58.4186 token/s   │
+├─────────────────────────┼─────────┼───────────────────┤
+│ Total Token Throughput  │ total   │ 7538.2774 token/s │
+╘═════════════════════════╧═════════╧═══════════════════╛[2026-08-27 04:21:16,834] [ais_bench] [[32mINFO[0m] Performance Result files located in outputs/perf_32k/20260827_041303/performances/qwen35-9b-32k-bs32.
+

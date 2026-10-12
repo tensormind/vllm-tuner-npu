@@ -1,0 +1,4 @@
+hardware:
+  accelerator: tpu
+  device_ids: []
+  tpu_type: v6e-4

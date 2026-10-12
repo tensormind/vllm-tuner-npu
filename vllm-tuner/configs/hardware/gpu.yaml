@@ -1,0 +1,4 @@
+hardware:
+  accelerator: gpu
+  device_ids: [0]
+  tpu_type: null

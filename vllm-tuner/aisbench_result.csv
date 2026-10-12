@@ -1,0 +1,2 @@
+trial,status,output_tokens_per_sec,req_per_sec,ttft_ms,tpot_ms,p50_ms,p95_ms,total_req,successful,duration_s,prefix_cache_hit_rate,peak_mem_mb,max_temp_c,gpu_memory_utilization
+0,completed,170.8859,0.1669,28710.1,152.2,184455.3,262531.9,128,128,767.0146826,0.0,148234.0,63.0,0.85

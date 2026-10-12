@@ -1,0 +1,103 @@
+INFO 08-28 06:31:30 [__init__.py:44] Available plugins for group vllm.platform_plugins:
+INFO 08-28 06:31:30 [__init__.py:46] - ascend -> vllm_ascend:register
+INFO 08-28 06:31:30 [__init__.py:49] All plugins in this group will be loaded. Set `VLLM_PLUGINS` to control which plugins to load.
+INFO 08-28 06:31:30 [__init__.py:238] Platform plugin ascend is activated
+INFO 08-28 06:31:30 [platform.py:62] Breakable cudagraph is force disabled on Ascend because DeepSeek V4 PIECEWISE cudagraph is not supported yet.
+2026-08-28 06:31:44,125 - 1034508 - ServiceProfiler - INFO - VLLM_USE_V1 not set, auto-detected via vLLM 0.23.0+empty: default 1
+INFO 08-28 06:31:44 [__init__.py:115] Registered model loader `<class 'vllm_ascend.model_loader.netloader.netloader.ModelNetLoaderElastic'>` with load format `netloader`
+INFO 08-28 06:31:44 [__init__.py:115] Registered model loader `<class 'vllm_ascend.model_loader.rfork.rfork_loader.RForkModelLoader'>` with load format `rfork`
+(APIServer pid=1034508) INFO 08-28 06:31:45 [api_utils.py:339] 
+(APIServer pid=1034508) INFO 08-28 06:31:45 [api_utils.py:339]        █     █     █▄   ▄█
+(APIServer pid=1034508) INFO 08-28 06:31:45 [api_utils.py:339]  ▄▄ ▄█ █     █     █ ▀▄▀ █  version 0.23.0
+(APIServer pid=1034508) INFO 08-28 06:31:45 [api_utils.py:339]   █▄█▀ █     █     █     █  model   /data/qwen3.5/Qwen3.5-27B
+(APIServer pid=1034508) INFO 08-28 06:31:45 [api_utils.py:339]    ▀▀  ▀▀▀▀▀ ▀▀▀▀▀ ▀     ▀
+(APIServer pid=1034508) INFO 08-28 06:31:45 [api_utils.py:339] 
+(APIServer pid=1034508) INFO 08-28 06:31:45 [api_utils.py:273] non-default args: {'model_tag': '/data/qwen3.5/Qwen3.5-27B', 'host': '0.0.0.0', 'port': 1025, 'model': '/data/qwen3.5/Qwen3.5-27B', 'trust_remote_code': True, 'seed': 1024, 'max_model_len': 133000, 'quantization': 'ascend', 'served_model_name': ['qwen3.5'], 'tensor_parallel_size': 2, 'gpu_memory_utilization': 0.9, 'enable_prefix_caching': False, 'max_num_batched_tokens': 16384, 'max_num_seqs': 32, 'async_scheduling': True, 'speculative_config': {'method': 'qwen3_5_mtp', 'num_speculative_tokens': 3, 'enforce_eager': True}, 'compilation_config': {'mode': None, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'vllm_ascend.compilation.compiler_interface.AscendCompiler', 'custom_ops': [], 'ir_enable_torch_wrap': None, 'splitting_ops': None, 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_vision_items_per_batch': 0, 'encoder_cudagraph_max_frames_per_batch': None, 'compile_sizes': None, 'compile_ranges_endpoints': None, 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_DECODE_ONLY: (2, 0)>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': None, 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': None, 'pass_config': {}, 'max_cudagraph_capture_size': None, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': None, 'static_all_moe_layers': []}, 'additional_config': {'enable_cpu_binding': True}}
+(APIServer pid=1034508) INFO 08-28 06:31:46 [model.py:611] Resolved architecture: Qwen3_5ForConditionalGeneration
+(APIServer pid=1034508) INFO 08-28 06:31:46 [model.py:1745] Using max model len 133000
+(APIServer pid=1034508) WARNING 08-28 06:31:46 [speculative.py:551] method `qwen3_5_mtp` is deprecated and replaced with mtp.
+(APIServer pid=1034508) INFO 08-28 06:31:46 [model.py:611] Resolved architecture: Qwen3_5MTP
+(APIServer pid=1034508) INFO 08-28 06:31:46 [model.py:1745] Using max model len 262144
+(APIServer pid=1034508) WARNING 08-28 06:31:46 [speculative.py:722] Enabling num_speculative_tokens > 1 will run multiple times of forward on same MTP layer,which may result in lower acceptance rate
+(APIServer pid=1034508) INFO 08-28 06:31:46 [speculative.py:885] Overriding draft model max model len from 262144 to 133000
+(APIServer pid=1034508) INFO 08-28 06:31:46 [scheduler.py:239] Chunked prefill is enabled with max_num_batched_tokens=16384.
+(APIServer pid=1034508) `Qwen2VLImageProcessorFast` is deprecated. The `Fast` suffix for image processors has been removed; use `Qwen2VLImageProcessor` instead.
+(APIServer pid=1034508) INFO 08-28 06:31:46 [patch_mamba_config.py:104] Setting attention block size to 1536 tokens to ensure that attention page size is >= mamba page size.
+(APIServer pid=1034508) INFO 08-28 06:31:46 [patch_mamba_config.py:119] Padding mamba page size by 1.92% to ensure that mamba page size and attention page size are exactly equal.
+(APIServer pid=1034508) ERROR 08-28 06:31:46 [modelslim_config.py:809] ModelSlim quantization config not found for model '/data/qwen3.5/Qwen3.5-27B'. Searched path: /data/qwen3.5/Qwen3.5-27B. Found JSON files: ['config.json', 'configuration.json', 'generation_config.json', 'model.safetensors.index.json', 'preprocessor_config.json', 'tokenizer.json', 'tokenizer_config.json', 'video_preprocessor_config.json', 'vocab.json'].
+(APIServer pid=1034508) Traceback (most recent call last):
+(APIServer pid=1034508)   File "/usr/local/python3.12.13/bin/vllm", line 6, in <module>
+(APIServer pid=1034508)     sys.exit(main())
+(APIServer pid=1034508)              ^^^^^^
+(APIServer pid=1034508)   File "/vllm-workspace/vllm/vllm/entrypoints/cli/main.py", line 95, in main
+(APIServer pid=1034508)     args.dispatch_function(args)
+(APIServer pid=1034508)   File "/vllm-workspace/vllm/vllm/entrypoints/cli/serve.py", line 148, in cmd
+(APIServer pid=1034508)     uvloop.run(run_server(args))
+(APIServer pid=1034508)   File "/usr/local/python3.12.13/lib/python3.12/site-packages/uvloop/__init__.py", line 96, in run
+(APIServer pid=1034508)     return __asyncio.run(
+(APIServer pid=1034508)            ^^^^^^^^^^^^^^
+(APIServer pid=1034508)   File "/usr/local/python3.12.13/lib/python3.12/asyncio/runners.py", line 195, in run
+(APIServer pid=1034508)     return runner.run(main)
+(APIServer pid=1034508)            ^^^^^^^^^^^^^^^^
+(APIServer pid=1034508)   File "/usr/local/python3.12.13/lib/python3.12/asyncio/runners.py", line 118, in run
+(APIServer pid=1034508)     return self._loop.run_until_complete(task)
+(APIServer pid=1034508)            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1034508)   File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+(APIServer pid=1034508)   File "/usr/local/python3.12.13/lib/python3.12/site-packages/uvloop/__init__.py", line 48, in wrapper
+(APIServer pid=1034508)     return await main
+(APIServer pid=1034508)            ^^^^^^^^^^
+(APIServer pid=1034508)   File "/vllm-workspace/vllm/vllm/entrypoints/openai/api_server.py", line 665, in run_server
+(APIServer pid=1034508)     await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)
+(APIServer pid=1034508)   File "/vllm-workspace/vllm/vllm/entrypoints/openai/api_server.py", line 679, in run_server_worker
+(APIServer pid=1034508)     async with build_async_engine_client(
+(APIServer pid=1034508)                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1034508)   File "/usr/local/python3.12.13/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=1034508)     return await anext(self.gen)
+(APIServer pid=1034508)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1034508)   File "/vllm-workspace/vllm/vllm/entrypoints/openai/api_server.py", line 99, in build_async_engine_client
+(APIServer pid=1034508)     async with build_async_engine_client_from_engine_args(
+(APIServer pid=1034508)                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1034508)   File "/usr/local/python3.12.13/lib/python3.12/contextlib.py", line 210, in __aenter__
+(APIServer pid=1034508)     return await anext(self.gen)
+(APIServer pid=1034508)            ^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1034508)   File "/vllm-workspace/vllm/vllm/entrypoints/openai/api_server.py", line 123, in build_async_engine_client_from_engine_args
+(APIServer pid=1034508)     vllm_config = engine_args.create_engine_config(usage_context=usage_context)
+(APIServer pid=1034508)                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+(APIServer pid=1034508)   File "/vllm-workspace/vllm/vllm/engine/arg_utils.py", line 2229, in create_engine_config
+(APIServer pid=1034508)     config = VllmConfig(
+(APIServer pid=1034508)              ^^^^^^^^^^^
+(APIServer pid=1034508)   File "/usr/local/python3.12.13/lib/python3.12/site-packages/pydantic/_internal/_dataclasses.py", line 121, in __init__
+(APIServer pid=1034508)     s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)
+(APIServer pid=1034508) pydantic_core._pydantic_core.ValidationError: 1 validation error for VllmConfig
+(APIServer pid=1034508)   Value error, 
+(APIServer pid=1034508) ================================================================================
+(APIServer pid=1034508) ERROR: ModelSlim Quantization Config Not Found
+(APIServer pid=1034508) ================================================================================
+(APIServer pid=1034508) 
+(APIServer pid=1034508) You have enabled '--quantization ascend' (ModelSlim quantization),
+(APIServer pid=1034508) but the model '/data/qwen3.5/Qwen3.5-27B' does not contain the required
+(APIServer pid=1034508) quantization config file ('quant_model_description.json').
+(APIServer pid=1034508) 
+(APIServer pid=1034508) This usually means the model weights are NOT quantized by ModelSlim.
+(APIServer pid=1034508) 
+(APIServer pid=1034508) Please choose one of the following solutions:
+(APIServer pid=1034508) 
+(APIServer pid=1034508)   Solution 1: Remove the quantization option (for float/unquantized models)
+(APIServer pid=1034508)   ----------------------------------------------------------
+(APIServer pid=1034508)     Remove '--quantization ascend' from your command if you want to
+(APIServer pid=1034508)     run the model with the original (float) weights.
+(APIServer pid=1034508) 
+(APIServer pid=1034508)     Example:
+(APIServer pid=1034508)       vllm serve /data/qwen3.5/Qwen3.5-27B
+(APIServer pid=1034508) 
+(APIServer pid=1034508)   Solution 2: Quantize your model weights with ModelSlim first
+(APIServer pid=1034508)   ----------------------------------------------------------
+(APIServer pid=1034508)     Use the ModelSlim tool to quantize your model weights before deployment.
+(APIServer pid=1034508)     After quantization, the model directory should contain 'quant_model_description.json'.
+(APIServer pid=1034508)     For more information, please refer to:
+(APIServer pid=1034508)     https://gitee.com/ascend/msit/tree/master/msmodelslim
+(APIServer pid=1034508) 
+(APIServer pid=1034508)   (Found JSON files in model directory: ['config.json', 'configuration.json', 'generation_config.json', 'model.safetensors.index.json', 'preprocessor_config.json', 'tokenizer.json', 'tokenizer_config.json', 'video_preprocessor_config.json', 'vocab.json'])
+(APIServer pid=1034508) ================================================================================ [type=value_error, input_value=ArgsKwargs((), {'model_co... 'shutdown_timeout': 0}), input_type=ArgsKwargs]
+(APIServer pid=1034508)     For further information visit https://errors.pydantic.dev/2.13/v/value_error
+(APIServer pid=1034508) [ERROR] 2026-08-28-06:31:46 (PID:1034508, Device:-1, RankID:-1) ERR99999 UNKNOWN applicaiton exception

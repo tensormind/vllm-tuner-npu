@@ -1,0 +1,33 @@
+# Dot-prefixed directories (per requirement)
+.claude/
+.claude_*/
+
+# Oversized / exceeds GitHub 100MB file limit
+qwen.tar.gz
+
+# Large generated artifacts (test outputs, datasets, logs, sweep results)
+aisbench_auto_tools_prefix/outputs/
+aisbench_auto_tools_prefix/dataset/
+vllm-tuner/logs_v3/
+bench/sweep/
+bench/outputs/
+bench/report/
+
+# Generated model/adapter weights (large binaries)
+mylora/adapter_model.safetensors
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Archives / downloaded bundles
+*.zip
+
+# OS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/

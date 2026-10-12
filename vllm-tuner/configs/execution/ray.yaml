@@ -1,0 +1,4 @@
+execution:
+  backend: ray
+  ray_address: "auto"
+  runtime_env: null
